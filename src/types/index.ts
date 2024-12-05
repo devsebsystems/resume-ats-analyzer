@@ -3,7 +3,14 @@ export interface Analysis {
   keywordMatches: string[];
   missingKeywords: string[];
   suggestions: string[];
-  improvedContent?: string;
+  improvedContent: {
+    original: string;
+    improved: string;
+    improvements: {
+      section: string;
+      changes: string[];
+    }[];
+  };
 }
 
 export interface AnalysisRequest {

@@ -8,7 +8,7 @@ const openai = new OpenAI({
 
 export async function analyzeResume({ resumeText, jobDescription }: AnalysisRequest): Promise<Analysis> {
   const prompt = `
-    Analyze this resume against the job description:
+    Analyze this resume against the job description and provide improvements while preserving the entire original content.
     
     Resume:
     ${resumeText}
@@ -16,14 +16,33 @@ export async function analyzeResume({ resumeText, jobDescription }: AnalysisRequ
     Job Description:
     ${jobDescription}
     
-    Provide a detailed analysis including:
-    1. Match score (0-100)
-    2. Matching keywords found
-    3. Important keywords missing
-    4. Specific suggestions for improvement
-    5. An improved version of the resume content
-    
-    Format as JSON with these keys: matchScore, keywordMatches, missingKeywords, suggestions, improvedContent
+    Provide a comprehensive analysis in JSON format with the following structure:
+    {
+      "matchScore": number (0-100),
+      "keywordMatches": string[],
+      "missingKeywords": string[],
+      "suggestions": string[],
+      "improvedContent": {
+        "original": "full original resume text",
+        "improved": "complete improved version with all enhancements",
+        "improvements": [
+          {
+            "section": "section name (e.g., 'Experience', 'Skills')",
+            "changes": [
+              "Specific improvement made in this section"
+            ]
+          }
+        ]
+      }
+    }
+
+    Important guidelines:
+    1. Preserve ALL original content - don't remove anything
+    2. Keep the same structure and format as the original
+    3. Add relevant keywords and phrases naturally within the existing content
+    4. Enhance impact statements and metrics
+    5. Improve clarity and formatting while maintaining the complete resume
+    6. Track all improvements made in each section
   `;
 
   const response = await openai.chat.completions.create({
@@ -31,15 +50,27 @@ export async function analyzeResume({ resumeText, jobDescription }: AnalysisRequ
     messages: [
       {
         role: "system",
-        content: "You are an expert ATS system and resume analyzer. Provide detailed, actionable feedback to help candidates improve their resumes."
+        content: `You are an expert ATS system and resume analyzer. Your task is to:
+        1. Preserve the entire original resume while making improvements
+        2. Enhance the content without removing any information
+        3. Add relevant keywords and strengthen impact statements naturally
+        4. Provide detailed tracking of all improvements made
+        5. Ensure the improved version maintains professional authenticity`
       },
       {
         role: "user",
         content: prompt
       }
     ],
-    response_format: { type: "json_object" }
+    response_format: { type: "json_object" },
+    temperature: 0.7,
+    max_tokens: 4000
   });
 
-  return JSON.parse(response.choices[0].message.content) as Analysis;
+  const content = response.choices[0].message.content;
+  if (!content) {
+    throw new Error('No content received from OpenAI');
+  }
+
+  return JSON.parse(content) as Analysis;
 }
